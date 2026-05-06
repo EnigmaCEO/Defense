@@ -6,6 +6,33 @@ export const metadata: Metadata = {
   title: "Sagitta Defense Review | Powered by SCE",
   description:
     "Buyer-facing defense reviews for protocols, treasuries, and on-chain systems.",
+  openGraph: {
+    title: "Sagitta Defense Review | Powered by SCE",
+    description:
+      "Buyer-facing defense reviews for protocols, treasuries, and on-chain systems.",
+    siteName: "Sagitta Defense",
+    type: "website",
+    images: [
+      {
+        url: "/header.png",
+        width: 1536,
+        height: 614,
+        alt: "Sagitta Defense Review",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Sagitta Defense Review | Powered by SCE",
+    description:
+      "Buyer-facing defense reviews for protocols, treasuries, and on-chain systems.",
+    images: [
+      {
+        url: "/header.png",
+        alt: "Sagitta Defense Review",
+      },
+    ],
+  },
 };
 
 const navItems = [
