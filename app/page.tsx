@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
+const INCIDENT_OVERVIEW_API =
+  "https://continuityengineserver.fly.dev/incidents/overview";
+
 export const metadata: Metadata = {
   title: "Sagitta Defense Review | Powered by SCE",
   description:
@@ -258,8 +261,179 @@ const builtFor = [
   ["Infrastructure Teams", "dependency risk, access control, readiness"],
 ];
 
+type IncidentTickerItem = {
+  id: string;
+  title: string;
+  source: string;
+  severity: string;
+  publishedDiscoveredDate: string;
+};
+
+type IncidentOverview = {
+  criticalIncidents: number;
+  criticalTickerItems: IncidentTickerItem[];
+};
+
+const INCIDENT_TITLE_MAX = 48;
+
 const defenseReviewEmailHref =
   "mailto:defense@sagitta.systems?subject=Sagitta%20Defense%20Review%20Request";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function readString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function normalizeTickerItem(value: unknown): IncidentTickerItem | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const id = readString(value.id);
+  const title = readString(value.title);
+
+  if (!id || !title) {
+    return null;
+  }
+
+  return {
+    id,
+    title,
+    source: readString(value.source) || "Case Library",
+    severity: readString(value.severity) || "critical",
+    publishedDiscoveredDate: readString(value.published_discovered_date),
+  };
+}
+
+async function getIncidentOverview(): Promise<IncidentOverview | null> {
+  try {
+    const response = await fetch(INCIDENT_OVERVIEW_API, {
+      next: { revalidate: 300 },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload: unknown = await response.json();
+
+    if (!isRecord(payload)) {
+      return null;
+    }
+
+    const criticalIncidents =
+      typeof payload.critical_incidents === "number"
+        ? payload.critical_incidents
+        : 0;
+    const criticalTickerItems = Array.isArray(payload.critical_ticker_items)
+      ? payload.critical_ticker_items
+          .map(normalizeTickerItem)
+          .filter((item): item is IncidentTickerItem => item !== null)
+      : [];
+
+    return {
+      criticalIncidents,
+      criticalTickerItems,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function formatIncidentDate(value: string): string {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+function truncateTickerText(value: string, maxLength: number): string {
+  return value.length > maxLength
+    ? `${value.slice(0, maxLength).trimEnd()}...`
+    : value;
+}
+
+function formatIncidentTickerItem(incident: IncidentTickerItem): string {
+  const incidentDate = formatIncidentDate(incident.publishedDiscoveredDate);
+  const meta = [incident.source, incidentDate, incident.id]
+    .filter(Boolean)
+    .join(" / ");
+
+  return `${truncateTickerText(incident.title, INCIDENT_TITLE_MAX)} / ${meta}`;
+}
+
+function LiveIncidentTicker({
+  overview,
+}: {
+  overview: IncidentOverview | null;
+}) {
+  const incidents = overview?.criticalTickerItems.slice(0, 8) ?? [];
+  const criticalCount = overview?.criticalIncidents ?? 0;
+
+  if (incidents.length === 0) {
+    return (
+      <section className="border-y border-white/10 bg-[#0d0818]/90 px-5 py-4">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 text-sm text-[#c9c0dc] md:flex-row md:items-center md:justify-between lg:px-8">
+          <span className="font-semibold text-white">Live incident context</span>
+          <span>Critical incident feed temporarily unavailable</span>
+          <a
+            className="text-[#f1d18a] transition hover:text-[#ffe3a3]"
+            href="#sample-report"
+          >
+            Review recent incidents in the Case Library
+          </a>
+        </div>
+      </section>
+    );
+  }
+
+  const tickerItems = incidents.map(formatIncidentTickerItem);
+  const doubledTickerItems = [...tickerItems, ...tickerItems];
+
+  return (
+    <section
+      aria-label="Live critical incident context"
+      className="border-y border-white/10 bg-[#0d0818]/90 px-5 py-4"
+    >
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 lg:px-8">
+        <div className="flex flex-col gap-2 text-sm md:flex-row md:items-center md:justify-between">
+          <span className="font-semibold text-white">Live incident context</span>
+          <span className="text-[#c9c0dc]">
+            {criticalCount.toLocaleString("en-US")} critical incidents tracked by
+            SCE
+          </span>
+        </div>
+        <div className="ticker-scroll relative overflow-hidden border-y border-white/10 bg-[#070511]/55 py-2">
+          <div className="ticker-track">
+            {doubledTickerItems.map((item, index) => (
+              <span
+                key={`${item}-${index}`}
+                aria-hidden={index >= tickerItems.length}
+                className="text-sm font-medium text-[#d8d0e8]"
+              >
+                {item}
+                <span className="mx-5 font-bold text-[#d9b15a]">•</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function PrimaryCta({
   href = defenseReviewEmailHref,
@@ -381,7 +555,9 @@ function AuthorityPathMotif() {
   );
 }
 
-export default function DefensePage() {
+export default async function DefensePage() {
+  const incidentOverview = await getIncidentOverview();
+
   return (
     <main className="min-h-screen overflow-hidden bg-[#070511] text-white">
       <div className="pointer-events-none fixed inset-0 -z-10">
@@ -483,15 +659,7 @@ export default function DefensePage() {
         </div>
       </section>
 
-      <section className="border-y border-white/10 bg-[#0d0818]/90 px-5 py-4">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 text-sm text-[#c9c0dc] md:flex-row md:items-center md:justify-between lg:px-8">
-          <span className="font-semibold text-white">Live incident context</span>
-          <span>Critical incident feed temporarily unavailable</span>
-          <a className="text-[#f1d18a] transition hover:text-[#ffe3a3]" href="#sample-report">
-            Review recent incidents in the Case Library
-          </a>
-        </div>
-      </section>
+      <LiveIncidentTicker overview={incidentOverview} />
 
       <section id="review" className="px-5 py-20 md:py-28">
         <div className="mx-auto max-w-7xl lg:px-8">

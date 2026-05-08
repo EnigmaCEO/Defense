@@ -26,3 +26,24 @@ html {
   background: rgba(217, 177, 90, 0.35);
   color: #fffaf0;
 }
+
+@keyframes ticker {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.ticker-track {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: ticker 36s linear infinite;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
