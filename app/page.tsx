@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 
+// /incidents/overview was renamed upstream and now returns 404; the ticker data
+// lives at /advisories/overview.
 const INCIDENT_OVERVIEW_API =
-  "https://continuityengineserver.fly.dev/incidents/overview";
+  "https://continuityengineserver.fly.dev/advisories/overview";
+const INCIDENT_OVERVIEW_TIMEOUT_MS = 8_000;
+
+// Regenerate in the background at most every five minutes.
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Sagitta Defense Review | Powered by SCE",
@@ -308,36 +315,53 @@ function normalizeTickerItem(value: unknown): IncidentTickerItem | null {
   };
 }
 
+// Reads the live overview and throws on any failure, including an empty
+// ticker, so that a bad read can never replace a good snapshot in the cache.
+async function readLiveIncidentOverview(): Promise<IncidentOverview> {
+  const response = await fetch(INCIDENT_OVERVIEW_API, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(INCIDENT_OVERVIEW_TIMEOUT_MS),
+  });
+
+  if (!response.ok) {
+    throw new Error(`incident overview returned ${response.status}`);
+  }
+
+  const payload: unknown = await response.json();
+
+  if (!isRecord(payload)) {
+    throw new Error("incident overview payload was not an object");
+  }
+
+  const count = payload.critical_advisories ?? payload.critical_incidents;
+  const criticalTickerItems = Array.isArray(payload.critical_ticker_items)
+    ? payload.critical_ticker_items
+        .map(normalizeTickerItem)
+        .filter((item): item is IncidentTickerItem => item !== null)
+    : [];
+
+  if (criticalTickerItems.length === 0) {
+    throw new Error("incident overview returned no ticker items");
+  }
+
+  return {
+    criticalIncidents: typeof count === "number" ? count : 0,
+    criticalTickerItems,
+  };
+}
+
+// Last-known-good snapshot in the shared data cache, served stale-while-
+// revalidate: once one read has succeeded, every render gets the stored ticker
+// immediately, and a refresh that fails leaves it in place.
+const readCachedIncidentOverview = unstable_cache(
+  readLiveIncidentOverview,
+  ["defense-incident-overview-v1"],
+  { revalidate: 300, tags: ["sce-critical-ticker"] },
+);
+
 async function getIncidentOverview(): Promise<IncidentOverview | null> {
   try {
-    const response = await fetch(INCIDENT_OVERVIEW_API, {
-      next: { revalidate: 300 },
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const payload: unknown = await response.json();
-
-    if (!isRecord(payload)) {
-      return null;
-    }
-
-    const criticalIncidents =
-      typeof payload.critical_incidents === "number"
-        ? payload.critical_incidents
-        : 0;
-    const criticalTickerItems = Array.isArray(payload.critical_ticker_items)
-      ? payload.critical_ticker_items
-          .map(normalizeTickerItem)
-          .filter((item): item is IncidentTickerItem => item !== null)
-      : [];
-
-    return {
-      criticalIncidents,
-      criticalTickerItems,
-    };
+    return await readCachedIncidentOverview();
   } catch {
     return null;
   }
@@ -388,7 +412,7 @@ function LiveIncidentTicker({
       <section className="border-y border-white/10 bg-[#0d0818]/90 px-5 py-4">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 text-sm text-[#c9c0dc] md:flex-row md:items-center md:justify-between lg:px-8">
           <span className="font-semibold text-white">Live incident context</span>
-          <span>Critical incident feed temporarily unavailable</span>
+          <span>Recent critical incidents from the SCE Case Library appear here</span>
           <a
             className="text-[#f1d18a] transition hover:text-[#ffe3a3]"
             href="#sample-report"
