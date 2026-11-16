@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { unstable_cache } from "next/cache";
+import { EmailAddressCopy, TrackedMailto } from "./cta-tracking";
 
 // /incidents/overview was renamed upstream and now returns 404; the ticker data
 // lives at /advisories/overview.
@@ -471,18 +472,21 @@ function LiveIncidentTicker({
 
 function PrimaryCta({
   href = defenseReviewEmailHref,
+  location,
   children,
 }: {
   href?: string;
+  location: string;
   children: React.ReactNode;
 }) {
   return (
-    <a
+    <TrackedMailto
       href={href}
+      location={location}
       className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#f1d18a]/40 bg-[#d9b15a] px-6 text-sm font-semibold text-[#150f05] shadow-[0_0_35px_rgba(217,177,90,0.28)] transition hover:bg-[#f4cf7d] focus:outline-none focus:ring-2 focus:ring-[#f1d18a] focus:ring-offset-2 focus:ring-offset-[#070511]"
     >
       {children}
-    </a>
+    </TrackedMailto>
   );
 }
 
@@ -630,7 +634,7 @@ export default async function DefensePage() {
               </a>
             ))}
           </div>
-          <PrimaryCta>Start Review</PrimaryCta>
+          <PrimaryCta location="nav">Start Review</PrimaryCta>
         </nav>
       </header>
 
@@ -663,9 +667,10 @@ export default async function DefensePage() {
               ))}
             </div>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <PrimaryCta>Start Defense Review</PrimaryCta>
+              <PrimaryCta location="hero">Start Defense Review</PrimaryCta>
               <SampleLink>View the sample Defense Review PDF</SampleLink>
             </div>
+            <EmailAddressCopy location="hero" className="mt-4" />
             <p className="mt-5 max-w-2xl rounded-2xl border border-[#d9b15a]/20 bg-[#d9b15a]/8 px-4 py-3 text-sm leading-6 text-[#f1d18a]">
               Powered by a production Case Library tracking CVE, De.Fi REKT,
               GitHub Advisories, and CISA KEV sources.
@@ -890,9 +895,10 @@ export default async function DefensePage() {
                 </div>
                 <p className="mt-3 text-[#c9c0dc]">Flat fee - One-time</p>
                 <div id="request-review" className="mt-8 flex flex-col gap-3 sm:flex-row lg:flex-col">
-                  <PrimaryCta>Request Defense Review</PrimaryCta>
+                  <PrimaryCta location="pricing">Request Defense Review</PrimaryCta>
                   <SampleLink>View the sample Defense Review PDF</SampleLink>
                 </div>
+                <EmailAddressCopy location="pricing" className="mt-4" />
               </div>
               <div className="grid gap-5 md:grid-cols-2">
                 <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-5">
@@ -970,7 +976,7 @@ export default async function DefensePage() {
                 signing authority, seed phrases, or transaction approval rights.
               </p>
               <div className="mt-7 flex flex-col gap-3">
-                <PrimaryCta>Request Defense Review</PrimaryCta>
+                <PrimaryCta location="intake">Request Defense Review</PrimaryCta>
                 <SampleLink>Get the sample report</SampleLink>
               </div>
             </div>
@@ -1014,9 +1020,10 @@ export default async function DefensePage() {
               Map control gaps and continuity risks before capital scales.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <PrimaryCta>Request Defense Review</PrimaryCta>
+              <PrimaryCta location="closing">Request Defense Review</PrimaryCta>
               <SampleLink>View the sample Defense Review PDF</SampleLink>
             </div>
+            <EmailAddressCopy location="closing" className="mt-5 justify-center" />
           </div>
         </div>
       </section>
@@ -1050,9 +1057,9 @@ export default async function DefensePage() {
               Links
             </h3>
             <div className="mt-4 flex flex-col gap-3 text-sm text-[#c9c0dc]">
-              <a href={defenseReviewEmailHref} className="hover:text-white">
+              <TrackedMailto href={defenseReviewEmailHref} location="footer" className="hover:text-white">
                 Contact
-              </a>
+              </TrackedMailto>
               <a href="/privacy" className="hover:text-white">
                 Privacy
               </a>
