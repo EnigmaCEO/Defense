@@ -110,9 +110,10 @@ const proofCards = [
     copy: "Sagitta Defense combines security judgment and software architecture experience to find control risks before they become continuity failures.",
   },
   {
-    title: "Public research coming next",
-    copy: "Sagitta Defense will publish incident teardowns focused on authority failure, treasury exposure, oracle dependency, governance posture, and continuity response.",
-    note: "Research notes coming soon",
+    title: "Public research published",
+    copy: "Defense mini-reviews trace a public CVE from exposure through reachability, exploitability, protocol authority, migration, and restoration. The first, on CVE-2023-39363, works through a fictional protocol so no real network is reviewed without asking.",
+    note: "Read the mini-reviews",
+    href: "https://www.sagitta.systems/defense/reviews",
   },
 ];
 
@@ -120,7 +121,6 @@ const proofChips = [
   "5 mapped assets",
   "29 control checks",
   "5 threat families",
-  "0 keys required",
 ];
 
 const sampleChecklist = [
@@ -185,9 +185,9 @@ const timelineSteps = [
     copy: "You receive the structured PDF report and next-action checklist.",
   },
   {
-    time: "Optional follow-up",
+    time: "Follow-up, included",
     title: "Evidence update",
-    copy: "Submit supporting proof and receive an updated verification view.",
+    copy: "Submit supporting proof and receive an updated verification view, at no extra cost.",
   },
 ];
 
@@ -206,7 +206,7 @@ const receives = [
   "Mapped assets and control gaps",
   "Evidence checklist",
   "Structured PDF report",
-  "Follow-up update after evidence submission",
+  "Follow-up update after evidence submission, included in the fee",
 ];
 
 const provides = [
@@ -283,8 +283,18 @@ type IncidentOverview = {
 
 const INCIDENT_TITLE_MAX = 48;
 
-const defenseReviewEmailHref =
-  "mailto:defense@sagitta.systems?subject=Sagitta%20Defense%20Review%20Request";
+// The request email arrives pre-filled with the starter intake, so a team can
+// answer it in one pass instead of waiting for a reply asking for it.
+const defenseReviewEmailBody = [
+  "Project name:",
+  ...intakeChecklist.map((item) => `${item}:`),
+  "",
+  "Preferred contact:",
+].join("\n");
+
+const defenseReviewEmailHref = `mailto:defense@sagitta.systems?subject=${encodeURIComponent(
+  "Sagitta Defense Review Request",
+)}&body=${encodeURIComponent(defenseReviewEmailBody)}`;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -782,7 +792,14 @@ export default async function DefensePage() {
               >
                 <h3 className="text-xl font-semibold text-white">{card.title}</h3>
                 <p className="mt-3 leading-7 text-[#c9c0dc]">{card.copy}</p>
-                {"note" in card ? (
+                {"href" in card ? (
+                  <a
+                    href={card.href}
+                    className="mt-5 inline-flex rounded-full border border-[#d9b15a]/40 bg-[#d9b15a]/10 px-3 py-1.5 text-xs font-semibold text-[#f1d18a] transition hover:border-[#d9b15a]/70 hover:bg-[#d9b15a]/20 focus:outline-none focus:ring-2 focus:ring-[#f1d18a]"
+                  >
+                    {card.note} &rarr;
+                  </a>
+                ) : "note" in card ? (
                   <p className="mt-5 inline-flex rounded-full border border-[#d9b15a]/25 bg-[#d9b15a]/10 px-3 py-1.5 text-xs font-semibold text-[#f1d18a]">
                     {card.note}
                   </p>
