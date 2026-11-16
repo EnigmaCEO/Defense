@@ -106,8 +106,8 @@ const proofCards = [
     copy: "Review the demo Defense Review PDF before requesting your own.",
   },
   {
-    title: "Built by cybersecurity and systems architecture experts",
-    copy: "Sagitta Defense combines security judgment and software architecture experience to find control risks before they become continuity failures.",
+    title: "Findings classified by evidence",
+    copy: "Every finding is classified by what the public evidence supports. An unresolved authority path is reported as unresolved, not inflated into a vulnerability because the evidence was missing.",
   },
   {
     title: "Public research published",
